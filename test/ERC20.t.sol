@@ -33,4 +33,22 @@ contract ERC20Test is Test {
         erc20.approve(address(0x1), 1000);
         assertEq(erc20.allowance(address(this), address(0x1)), 1000);
     }
+
+    function testTransferFrom() public {
+        erc20.mint(address(this), 1000);
+        erc20.approve(address(0x1), 1000);
+        assertEq(erc20.allowance(address(this), address(0x1)), 1000);
+        vm.startPrank(address(0x1));
+        erc20.transferFrom(address(this), address(0x2), 1000);
+        assertEq(erc20.balanceOf(address(0x2)), 1000);
+    }
+
+    function testBurn() public {
+        erc20.mint(address(this), 1000);
+        assertEq(erc20.totalSupply(), 1000);
+        assertEq(erc20.balanceOf(address(this)), 1000);
+        erc20.burn(address(this), 1000);
+        assertEq(erc20.totalSupply(), 0);
+        assertEq(erc20.balanceOf(address(this)), 0);
+    }
 }

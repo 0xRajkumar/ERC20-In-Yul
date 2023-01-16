@@ -92,4 +92,59 @@ contract ERC20 {
         }
         return true;
     }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) public returns (bool) {
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, from)
+            let allowanceSlot := allowance.slot
+            mstore(add(ptr, 0x20), allowanceSlot)
+            let slot1 := keccak256(ptr, 0x40)
+            mstore(add(ptr, 0x40), caller())
+            mstore(add(ptr, 0x60), slot1)
+            let slot2 := keccak256(add(ptr, 0x40), 0x40)
+            mstore(add(ptr, 0x80), sload(slot2))
+            let approval := mload(add(ptr, 0x80))
+            let checkAmountIsMore := not(gt(amount, approval))
+            if iszero(checkAmountIsMore) {
+                revert(0, 0)
+            }
+            sstore(slot2, sub(mload(add(ptr, 0x80)), amount))
+        }
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, from)
+            let balanceOfSlot := balanceOf.slot
+            mstore(add(ptr, 0x20), balanceOfSlot)
+            let slotUser1 := keccak256(ptr, 0x40)
+            let balanceAfterUser1 := sub(sload(slotUser1), amount)
+            sstore(slotUser1, balanceAfterUser1)
+            //
+            mstore(ptr, to)
+            let slotUser2 := keccak256(ptr, 0x40)
+            let balanceAfterUser2 := add(sload(slotUser2), amount)
+            sstore(slotUser2, balanceAfterUser2)
+        }
+        return true;
+    }
+
+    function burn(address from, uint256 amount) external {
+        assembly {
+            let totalSupplySlot := totalSupply.slot
+            let totalSupplyAfter := sub(sload(totalSupplySlot), amount)
+            sstore(totalSupplySlot, totalSupplyAfter)
+
+            let ptr := mload(0x40)
+            mstore(ptr, from)
+            let balanceOfSlot := balanceOf.slot
+            mstore(add(ptr, 0x20), balanceOfSlot)
+            let slot := keccak256(ptr, 0x40)
+            let balanceAfter := sub(sload(slot), amount)
+            sstore(slot, balanceAfter)
+        }
+    }
 }
