@@ -27,12 +27,13 @@ contract ERC20 {
         }
     }
 
-    function symbol() external pure returns (string memory symbol_) {
+    function symbol() external pure returns (string memory) {
         assembly {
-            symbol_ := mload(0x40)
-            mstore(symbol_, 2)
-            mstore(add(symbol_, 0x20), symbolInBytes)
-            mstore(0x40, add(symbol_, 0x40))
+            let ptr := mload(0x40)
+            mstore(ptr, 0x20)
+            mstore(add(ptr, 0x20), 2)
+            mstore(add(ptr, 0x40), symbolInBytes)
+            return(ptr, 0x60)
         }
     }
 
@@ -49,7 +50,6 @@ contract ERC20 {
             let totalSupplySlot := totalSupply.slot
             let totalSupplyAfter := add(sload(totalSupplySlot), amount)
             sstore(totalSupplySlot, totalSupplyAfter)
-
             let ptr := mload(0x40)
             mstore(ptr, caller())
             let balanceOfSlot := balanceOf.slot
@@ -69,7 +69,6 @@ contract ERC20 {
             let slotUser1 := keccak256(ptr, 0x40)
             let balanceAfterUser1 := sub(sload(slotUser1), amount)
             sstore(slotUser1, balanceAfterUser1)
-            //
             mstore(ptr, to)
             let slotUser2 := keccak256(ptr, 0x40)
             let balanceAfterUser2 := add(sload(slotUser2), amount)
