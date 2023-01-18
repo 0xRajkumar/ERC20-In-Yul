@@ -48,7 +48,12 @@ contract ERC20 {
     function mint(address to, uint256 amount) external {
         assembly {
             let totalSupplySlot := totalSupply.slot
-            let totalSupplyAfter := add(sload(totalSupplySlot), amount)
+            let totalSupplyBefore := sload(totalSupplySlot)
+            let max_uint := sub(exp(2, 256), 1)
+            if iszero(iszero(gt(amount, sub(max_uint, totalSupplyBefore)))) {
+                revert(0, 0)
+            }
+            let totalSupplyAfter := add(totalSupplyBefore, amount)
             sstore(totalSupplySlot, totalSupplyAfter)
             let ptr := mload(0x40)
             mstore(ptr, caller())
@@ -67,7 +72,11 @@ contract ERC20 {
             let balanceOfSlot := balanceOf.slot
             mstore(add(ptr, 0x20), balanceOfSlot)
             let slotUser1 := keccak256(ptr, 0x40)
-            let balanceAfterUser1 := sub(sload(slotUser1), amount)
+            let User1Balance := sload(slotUser1)
+            if iszero(iszero(lt(User1Balance, amount))) {
+                revert(0, 0)
+            }
+            let balanceAfterUser1 := sub(User1Balance, amount)
             sstore(slotUser1, balanceAfterUser1)
             mstore(ptr, to)
             let slotUser2 := keccak256(ptr, 0x40)
@@ -106,23 +115,24 @@ contract ERC20 {
             mstore(add(ptr, 0x40), caller())
             mstore(add(ptr, 0x60), slot1)
             let slot2 := keccak256(add(ptr, 0x40), 0x40)
-            mstore(add(ptr, 0x80), sload(slot2))
-            let approval := mload(add(ptr, 0x80))
-            let checkAmountIsMore := not(gt(amount, approval))
-            if iszero(checkAmountIsMore) {
+            let allowanceAmount := sload(slot2)
+            if iszero(iszero(lt(allowanceAmount, amount))) {
                 revert(0, 0)
             }
             sstore(slot2, sub(mload(add(ptr, 0x80)), amount))
-        }
-        assembly {
-            let ptr := mload(0x40)
+            //Updating pointer
+            mstore(0x40, add(ptr, 0x80))
+            let newPtr := mload(0x40)
             mstore(ptr, from)
             let balanceOfSlot := balanceOf.slot
             mstore(add(ptr, 0x20), balanceOfSlot)
             let slotUser1 := keccak256(ptr, 0x40)
-            let balanceAfterUser1 := sub(sload(slotUser1), amount)
+            let user1Balance := sload(slotUser1)
+            if iszero(iszero(lt(user1Balance, amount))) {
+                revert(0, 0)
+            }
+            let balanceAfterUser1 := sub(user1Balance, amount)
             sstore(slotUser1, balanceAfterUser1)
-            //
             mstore(ptr, to)
             let slotUser2 := keccak256(ptr, 0x40)
             let balanceAfterUser2 := add(sload(slotUser2), amount)
@@ -133,17 +143,20 @@ contract ERC20 {
 
     function burn(address from, uint256 amount) external {
         assembly {
-            let totalSupplySlot := totalSupply.slot
-            let totalSupplyAfter := sub(sload(totalSupplySlot), amount)
-            sstore(totalSupplySlot, totalSupplyAfter)
-
             let ptr := mload(0x40)
             mstore(ptr, from)
             let balanceOfSlot := balanceOf.slot
             mstore(add(ptr, 0x20), balanceOfSlot)
             let slot := keccak256(ptr, 0x40)
-            let balanceAfter := sub(sload(slot), amount)
+            let UserBalance := sload(slot)
+            if iszero(iszero(lt(UserBalance, amount))) {
+                revert(0, 0)
+            }
+            let balanceAfter := sub(UserBalance, amount)
             sstore(slot, balanceAfter)
+            let totalSupplySlot := totalSupply.slot
+            let totalSupplyAfter := sub(sload(totalSupplySlot), amount)
+            sstore(totalSupplySlot, totalSupplyAfter)
         }
     }
 }

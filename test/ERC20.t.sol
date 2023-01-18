@@ -30,6 +30,13 @@ contract ERC20Test is Test {
         vm.stopPrank();
     }
 
+    function testMintShouldRevertOnOverflow() public {
+        vm.prank(testUser1);
+        erc20.mint(testUser1, 1e18);
+        vm.expectRevert();
+        erc20.mint(testUser1, type(uint256).max);
+    }
+
     function testTransfer(uint256 testAmount) public {
         vm.startPrank(testUser1);
         erc20.mint(testUser1, testAmount);
@@ -38,6 +45,17 @@ contract ERC20Test is Test {
         assertEq(totalSupply, testAmount);
         uint256 testUser2Balance = erc20.balanceOf(testUser2);
         assertEq(testUser2Balance, testAmount);
+        vm.stopPrank();
+    }
+
+    function testTransferShouldRevertOnUnderflow() public {
+        uint256 amountMinting = 1e18;
+        uint256 amountTransfering = 2e18;
+        vm.startPrank(testUser1);
+        erc20.mint(testUser1, amountMinting);
+        vm.expectRevert();
+        erc20.transfer(testUser2, amountTransfering);
+        vm.stopPrank();
     }
 
     function testApprove(uint256 testAmount) public {
@@ -67,6 +85,36 @@ contract ERC20Test is Test {
         vm.stopPrank();
     }
 
+    function testTransferFromShouldRevertOnUnderflowOnLessAllowance() public {
+        uint256 allowanceAmount = 1e18;
+        uint256 SpendingAmount = 2e18;
+        vm.startPrank(testUser1);
+        erc20.mint(testUser1, allowanceAmount + SpendingAmount);
+        erc20.approve(testUser2, allowanceAmount);
+        uint256 checkAllowance = erc20.allowance(testUser1, testUser2);
+        assertEq(checkAllowance, allowanceAmount);
+        vm.stopPrank();
+        vm.startPrank(testUser2);
+        vm.expectRevert();
+        erc20.transferFrom(testUser1, testUser2, SpendingAmount);
+        vm.stopPrank();
+    }
+
+    function testTransferFromShouldRevertOnUnderflowOnLessAmount() public {
+        uint256 SpendingAmount = 1e18;
+        uint256 allowanceAmount = 2e18;
+        vm.startPrank(testUser1);
+        erc20.mint(testUser1, SpendingAmount);
+        erc20.approve(testUser2, allowanceAmount);
+        uint256 checkAllowance = erc20.allowance(testUser1, testUser2);
+        assertEq(checkAllowance, allowanceAmount);
+        vm.stopPrank();
+        vm.startPrank(testUser2);
+        vm.expectRevert();
+        erc20.transferFrom(testUser1, testUser2, allowanceAmount);
+        vm.stopPrank();
+    }
+
     function testBurn(uint256 testAmount1, uint256 testAmount2) public {
         (testAmount1, testAmount2) = testAmount1 > testAmount2
             ? (testAmount1, testAmount2)
@@ -78,6 +126,18 @@ contract ERC20Test is Test {
         erc20.burn(testUser1, testAmount2);
         assertEq(erc20.totalSupply(), testAmount1 - testAmount2);
         assertEq(erc20.balanceOf(testUser1), testAmount1 - testAmount2);
+        vm.stopPrank();
+    }
+
+    function testBurnShouldOnUnderflow() public {
+        uint256 amountToMint = 1e18;
+        uint256 amountToBurn = 2e18;
+        vm.startPrank(testUser1);
+        erc20.mint(testUser1, amountToMint);
+        assertEq(erc20.totalSupply(), amountToMint);
+        assertEq(erc20.balanceOf(testUser1), amountToMint);
+        vm.expectRevert();
+        erc20.burn(testUser1, amountToBurn);
         vm.stopPrank();
     }
 }
