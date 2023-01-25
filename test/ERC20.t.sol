@@ -10,6 +10,10 @@ contract ERC20Test is Test {
     address testUser1 = address(0x1);
     address testUser2 = address(0x2);
 
+    //
+    address[] approveTo;
+    uint256[] approveAmount;
+
     function setUp() public {
         erc20 = new ERC20();
     }
@@ -138,6 +142,38 @@ contract ERC20Test is Test {
         assertEq(erc20.balanceOf(testUser1), amountToMint);
         vm.expectRevert();
         erc20.burn(testUser1, amountToBurn);
+        vm.stopPrank();
+    }
+
+    function testApproveMany() public {
+        vm.prank(testUser1);
+        uint256 num = 3;
+        for (uint160 i = 0; i < num; i++) {
+            approveTo.push(address(i + 1));
+            approveAmount.push((i + 1) * 1e18);
+        }
+        erc20.approveMany(approveTo, approveAmount);
+        for (uint160 i = 0; i < num; i++) {
+            assertEq(
+                erc20.allowance(testUser1, address(i + 1)),
+                (i + 1) * 1e18
+            );
+        }
+        vm.stopPrank();
+    }
+
+    function testApproveManyShouldRevertOnWrongInput() public {
+        vm.prank(testUser1);
+        uint256 num1 = 3;
+        uint256 num2 = 4;
+        for (uint160 i = 0; i < num1; i++) {
+            approveTo.push(address(i + 1));
+        }
+        for (uint160 i = 0; i < num2; i++) {
+            approveAmount.push((i + 1) * 1e18);
+        }
+        vm.expectRevert();
+        erc20.approveMany(approveTo, approveAmount);
         vm.stopPrank();
     }
 }

@@ -105,6 +105,36 @@ contract ERC20 {
         return true;
     }
 
+    function approveMany(
+        address[] memory addresses,
+        uint256[] memory amounts
+    ) public returns (bool) {
+        assembly {
+            let addrsSize := mload(addresses)
+            let amountsSize := mload(amounts)
+            if iszero(eq(addrsSize, amountsSize)) {
+                revert(0, 0)
+            }
+            for {
+                let i := 0
+            } lt(i, addrsSize) {
+                i := add(i, 1)
+            } {
+                let userAddress := mload(add(addresses, mul(0x20, add(i, 1))))
+                let amount := mload(add(amounts, mul(0x20, add(i, 1))))
+                mstore(0x00, caller())
+                let allowanceSlot := allowance.slot
+                mstore(0x20, allowanceSlot)
+                let slot1 := keccak256(0x00, 0x40)
+                mstore(0x00, userAddress)
+                mstore(0x20, slot1)
+                let slot2 := keccak256(0x00, 0x40)
+                sstore(slot2, amount)
+            }
+        }
+        return true;
+    }
+
     function transferFrom(
         address from,
         address to,
