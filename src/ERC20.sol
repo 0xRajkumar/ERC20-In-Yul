@@ -65,8 +65,12 @@ contract ERC20 {
         }
     }
 
-    function transfer(address to, uint256 amount) public returns (bool) {
+    function transfer(address, uint256) public returns (bool) {
         assembly {
+            let firstPtr := mload(0x40)
+            let to := calldataload(0x4)
+            let amount := calldataload(add(0x20, 0x4))
+            mstore(0x40, add(firstPtr, 0x40))
             let ptr := mload(0x40)
             mstore(ptr, caller())
             let balanceOfSlot := balanceOf.slot
